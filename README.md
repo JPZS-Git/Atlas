@@ -1,6 +1,6 @@
 # Atlas - Seu Planejador de Treinos
 
-![Atlas Logo](assets/logo/logo_sem_fundo.png)
+![Atlas Logo](assets/logo_sem_fundo.png)
 
 ## Sobre o Projeto
 
