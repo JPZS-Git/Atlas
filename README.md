@@ -1,6 +1,6 @@
 # Atlas - Seu Planejador de Treinos
 
-!http://googleusercontent.com/image_generation_content/0
+![Atlas Logo](assets/logo/logo_sem_fundo.png)
 
 ## Sobre o Projeto
 
@@ -54,10 +54,3 @@ Certifique-se de que você tem o Flutter SDK e um editor de código (como o VS C
 
 ---
 
-## Contato
-
-Para mais informações, entre em contato:
-
-* **Seu Nome:** [Seu Nome Aqui]
-* **Email:** [seu.email@exemplo.com]
-* **LinkedIn:** [Seu Perfil do LinkedIn]
