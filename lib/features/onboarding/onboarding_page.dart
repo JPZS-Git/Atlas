@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/how_it_works_ob_page.dart';
 import 'pages/welcome_ob_page.dart';
+import 'pages/consent_page.dart';
+import 'pages/go_to_access_page_ob_page.dart';
+import 'widgets/dots_indicator.dart';
 
 class OnboardingPage extends StatefulWidget {
   static const routeName = '/onboarding';
@@ -13,13 +17,30 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class _OnboardingPageState extends State<OnboardingPage> {
+  final _totalPagesInOBPage = 4;
+  final _consentPageIndex = 2;
+
   final _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Widget> pages = const [
-    WellcomeOBPage(),
-    HowItWorksOBPage(),
-  ];
+  late final List<Widget> pages;
+
+  @override
+  void initState() {
+    super.initState();
+    pages = [
+      const WellcomeOBPage(),
+      const HowItWorksOBPage(),
+      ConsentPageOBPage(onConsentGiven: _onConsentGiven),
+      const GoToAccessPage(),
+    ];
+
+    _pageController.addListener(() {
+      setState(() {
+        _currentPage = _pageController.page!.round();
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -27,7 +48,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
-  bool get isLastPage => _currentPage == pages.length - 1;
+  bool get isLastPage => _currentPage >= _consentPageIndex;
+  bool get isFirstPage => _currentPage == 0;
+
+  _onConsentGiven() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboardingComplete', true);
+
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,74 +67,69 @@ class _OnboardingPageState extends State<OnboardingPage> {
       backgroundColor: const Color(0xFF121212),
       body: Stack(
         children: [
-          PageView.builder(
+          PageView(
             controller: _pageController,
-            itemCount: pages.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              return AnimatedBuilder(
-                animation: _pageController,
-                builder: (context, child) {
-                  double value = 1.0;
-                  if (_pageController.position.haveDimensions) {
-                    value = _pageController.page! - index;
-                    value = (1 - (value.abs() * 0.3)).clamp(0.0, 1.0);
-                  } else if (index == 0) {
-                    value = 1.0;
-                  } else {
-                    value = 0.7;
-                  }
-
-                  return Transform.scale(
-                    scale: value,
-                    child: Opacity(
-                      opacity: value,
-                      child: pages[index],
-                    ),
-                  );
-                },
-              );
-            },
+            physics: _currentPage >= _consentPageIndex
+                ? const NeverScrollableScrollPhysics()
+                : const ClampingScrollPhysics(),
+            children: pages,
           ),
 
           Positioned(
             bottom: 24,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                pages.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  width: _currentPage == index ? 14 : 10,
-                  height: _currentPage == index ? 14 : 10,
-                  decoration: BoxDecoration(
-                    color: _currentPage == index
-                        ? const Color(0xFF26A69A)
-                        : Colors.white38,
-                    shape: BoxShape.circle,
+            child: Visibility(
+              visible: _currentPage < (_totalPagesInOBPage - 1),
+              child: DotsIndicator(
+                totalDots: _totalPagesInOBPage,
+                currentIndex: _currentPage,
+              ),
+            ),
+          ),
+
+          if (!isLastPage)
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 40.0, right: 16.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    _pageController.jumpToPage(_consentPageIndex);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF26A69A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                  ),
+                  child: const Text(
+                    'Pular',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
           SafeArea(
             child: Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 60),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 60),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (_currentPage != 0)
-                      IconButton(
+                    
+                    Visibility(
+                      visible: !isFirstPage && _currentPage < (_totalPagesInOBPage - 1),
+                      child: IconButton(
                         onPressed: () {
                           _pageController.previousPage(
                             duration: const Duration(milliseconds: 300),
@@ -110,14 +137,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           );
                         },
                         icon: const Icon(Icons.arrow_back_ios,
-                            size: 40, 
-                            color: Color(0xFF26A69A)),
-                      )
-                    else
-                      const SizedBox(width: 36),
+                            size: 40, color: Color(0xFF26A69A)),
+                      ),
+                    ),
 
-                    if (!isLastPage)
-                      IconButton(
+                    if (isFirstPage) const SizedBox(width: 36),
+
+                    Visibility(
+                      visible: _currentPage < _consentPageIndex,
+                      child: IconButton(
                         onPressed: () {
                           _pageController.nextPage(
                             duration: const Duration(milliseconds: 300),
@@ -125,11 +153,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           );
                         },
                         icon: const Icon(Icons.arrow_forward_ios,
-                            size: 40, 
-                            color: Color(0xFF26A69A)),
-                      )
-                    else
-                      const SizedBox(width: 36),
+                            size: 40, color: Color(0xFF26A69A)),
+                      ),
+                    ),
+
+                    if (isLastPage) const SizedBox(width: 36),
                   ],
                 ),
               ),

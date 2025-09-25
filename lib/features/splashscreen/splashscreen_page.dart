@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../onboarding/onboarding_page.dart';
+import '../home/home_page.dart';
 
 class SplashScreenPage extends StatefulWidget {
+  static const routeName = '/';
+
   const SplashScreenPage({super.key});
 
   @override
@@ -26,15 +30,7 @@ class _SplashScreenPageState extends State<SplashScreenPage>
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const OnboardingPage(), 
-            transitionDuration: const Duration(milliseconds: 800),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
+        _checkOnboardingStatus();
       }
     });
   }
@@ -43,6 +39,21 @@ class _SplashScreenPageState extends State<SplashScreenPage>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingComplete = prefs.getBool('onboardingComplete') ?? false;
+
+    if (onboardingComplete) {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(HomePage.routeName);
+      }
+    } else {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(OnboardingPage.routeName);
+      }
+    }
   }
 
   @override
@@ -55,12 +66,11 @@ class _SplashScreenPageState extends State<SplashScreenPage>
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(
-                'assets/logo_sem_fundo.png', 
+                'assets/logo_sem_fundo.png',
                 width: 280,
                 height: 280,
               ),
               const SizedBox(height: 25),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40.0),
                 child: AnimatedBuilder(
@@ -70,8 +80,8 @@ class _SplashScreenPageState extends State<SplashScreenPage>
                       value: _animation.value,
                       minHeight: 6,
                       backgroundColor: Colors.white24,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFF26A69A), 
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFF26A69A),
                       ),
                     );
                   },
